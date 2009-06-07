@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = '0.02';
+$VERSION = '2.12';
 
 require Exporter;
 our @ISA = qw( Exporter );
@@ -36,19 +36,19 @@ POE::Component::Client::NNTP::Constants defines a number of constants that are r
 
 =over
 
-=item NNTP_EAT_NONE
+=item C<NNTP_EAT_NONE>
 
 Value: 1
 
-=item NNTP_EAT_CLIENT
+=item C<NNTP_EAT_CLIENT>
 
 Value: 2
 
-=item NNTP_EAT_PLUGIN
+=item C<NNTP_EAT_PLUGIN>
 
 Value: 3
 
-=item NNTP_EAT_ALL
+=item C<NNTP_EAT_ALL>
 
 Value: 4
 
@@ -60,7 +60,7 @@ Chris 'BinGOs' Williams <chris@bingosnet.co.uk>
 
 =head1 LICENSE
 
-Copyright C<(c)> Chris Williams.
+Copyright E<copy> Chris Williams.
 
 This module may be used, modified, and distributed under the same terms as Perl itself. Please see the license that came with your Perl distribution for details.
 
@@ -70,3 +70,4 @@ L<POE::Component::Client::NNTP>
 
 L<POE::Component::Pluggable>
 
+=cut
