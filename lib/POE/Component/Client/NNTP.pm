@@ -19,7 +19,22 @@ use base qw(POE::Component::Pluggable);
 use POE::Component::Pluggable::Constants qw(:ALL);
 use vars qw($VERSION);
 
-$VERSION = '2.12';
+$VERSION = '2.14';
+
+our ($GOT_SSL,$GOT_SOCKET6);
+
+BEGIN {
+    eval {
+        require POE::Component::SSLify;
+        import POE::Component::SSLify qw( Client_SSLify );
+        $GOT_SSL = 1;
+    };
+    eval {
+        require Socket6;
+        import Socket6;
+        $GOT_SOCKET6 = 1;
+    };
+}
 
 sub spawn {
   my ($package,$alias,$hash) = splice @_, 0, 3;
@@ -33,6 +48,10 @@ sub spawn {
   $hash->{'NNTPServer'} = "news" unless defined $hash->{'NNTPServer'} or defined $ENV{'NNTPSERVER'};
   $hash->{'NNTPServer'} = $ENV{'NNTPSERVER'} unless defined $hash->{'NNTPServer'};
   $hash->{'Port'} = 119 unless defined $hash->{'Port'};
+  if ( $hash->{'UseSSL'} and !$GOT_SSL ) { 
+     warn "'UseSSL' specified, but could not load POE::Component::SSLify\n";
+     $hash->{'UseSSL'} = 0;
+  }
   
   my $self = bless { }, $package;
   
@@ -40,6 +59,7 @@ sub spawn {
   $self->{remoteserver} = $hash->{'NNTPServer'};
   $self->{serverport} = $hash->{'Port'};
   $self->{localaddr} = $hash->{'LocalAddr'};
+  $self->{usessl} = $hash->{'UseSSL'};
 
   $self->{session_id} = POE::Session->create(
 			object_states => [
@@ -47,7 +67,7 @@ sub spawn {
 			  $self => $package_events,
 			],
 			heap => $self,
-                     	args => [ $alias, @_ ],
+      args => [ $alias, @_ ],
   )->ID();
   return $self;
 }
@@ -180,6 +200,17 @@ sub _sock_up {
   delete $self->{socketfactory};
 
   $self->{localaddr} = (unpack_sockaddr_in( getsockname $socket))[1];
+
+  if ($GOT_SSL and $self->{usessl}) {
+    eval {
+       $socket = Client_SSLify($socket);
+    };
+
+    if ($@) {
+       warn "Couldn't use an SSL socket: $@\n";
+       $self->{usessl} = 0;
+    }
+  }
 
   $self->{'socket'} = new POE::Wheel::ReadWrite
   (
@@ -436,11 +467,16 @@ Possible values for the hashref are:
    'NNTPServer', the DNS name or IP address of the NNTP host to connect to; 
    'Port', the IP port on that host
    'LocalAddr', an IP address on the client to connect from. 
+   'UseSSL', set to a true value to indicate that the poco should use SSL
 
-If 'NNTPServer' is not specified, the default is 'news', unless the environment variable 'NNTPServer' is set. If 'Port' is not specified the default is 119.
+If C<NNTPServer> is not specified, the default is C<news>, unless the environment variable C<NNTPServer> is set. If C<Port> is not specified the default is 119.
 
   POE::Component::Client::NNTP->spawn( 'NNTP-Client', { NNTPServer => 'news', Port => 119,
 		LocalAddr => '192.168.1.99' } );
+
+C<UseSSL> requires that L<POE::Component::SSLify> is installed.
+
+Returns a POE::Component::Client::NNTP object.
 
 =back
 
@@ -469,18 +505,16 @@ The component accepts the following events:
 Takes N arguments: a list of event names that your session wants to listen for, minus the 'nntp_' prefix, ( this is 
 similar to L<POE::Component::IRC> ). 
 
-Registering for 'all' will cause it to send all NNTP-related events to you; this is the easiest way to handle it.
+Registering for C<all> will cause it to send all NNTP-related events to you; this is the easiest way to handle it.
 
 =item C<unregister>
 
-Takes N arguments: a list of event names which you don't want to receive. If you've previously done a 'register' for a particular event which you no longer care about, this event will tell the NNTP connection to stop sending them to you. (If you haven't, it just ignores you. No big deal).
-
-Please ensure that you always 'unregister' with the component before asking it to 'shutdown'.
+Takes N arguments: a list of event names which you don't want to receive. If you've previously done a C<register> for a particular event which you no longer care about, this event will tell the NNTP connection to stop sending them to you. (If you haven't, it just ignores you. No big deal).
 
 =item C<connect>
 
 Takes no arguments. Tells the NNTP component to start up a connection to the previously specified NNTP server. You will 
-receive a 'nntp_connected' event.
+receive a C<nntp_connected> event.
 
 =item C<disconnect>
 
@@ -490,7 +524,7 @@ Takes no arguments. Terminates the socket connection ungracelessly.
 
 Takes no arguments. Terminates the component.
 
-Always ensure that you call 'unregister' before shutting down the component.
+Always ensure that you call C<unregister> before shutting down the component.
 
 =back
 
@@ -564,7 +598,7 @@ Takes no arguments.
 
 =item C<authinfo>
 
-Takes two arguments: first argument is either 'user' or 'pass', second argument is the user or password, respectively. 
+Takes two arguments: first argument is either C<user> or C<pass>, second argument is the user or password, respectively. 
 Not technically part of RFC 977 L<http://www.faqs.org/rfcs/rfc977.html>, but covered in RFC 2980 L<http://www.faqs.org/rfcs/rfc2980.html>.
 
 =item C<send_cmd>
@@ -582,13 +616,13 @@ The following events are generated by the component:
 
 =item C<nntp_registered>
 
-Generated when you either explicitly 'register' with the component or you spawn a NNTP poco
-from within your own session. ARG0 is the poco's object.
+Generated when you either explicitly C<register> with the component or you spawn a NNTP poco
+from within your own session. C<ARG0> is the poco's object.
 
 =item C<nntp_connected>
 
 Generated when the component successfully makes a connection to the NNTP server. Please note, that this is only the
-underlying network connection. Wait for either an 'nntp_200' or 'nntp_201' before sending any commands to the server.
+underlying network connection. Wait for either an C<nntp_200> or C<nntp_201> before sending any commands to the server.
 
 =item C<nntp_disconnected>
 
@@ -601,10 +635,10 @@ Generated when the component fails to establish a connection to the NNTP server.
 =item C<Numeric> responses ( See RFC 977 )
 
 Messages generated by NNTP servers consist of a numeric code and a text response. These will be sent to you as 
-events with the numeric code prefixed with 'nntp_'. ARG0 is the text response.
+events with the numeric code prefixed with C<nntp_>. C<ARG0>is the text response.
 
-Certain responses return following text, such as the ARTICLE command, which returns the specified article. These responses
-are returned in an array ref contained in ARG1.
+Certain responses return following text, such as the C<ARTICLE> command, which returns the specified article. These responses
+are returned in an array ref contained in C<ARG1>.
 
 Eg. 
 
@@ -679,7 +713,7 @@ There are two types of handlers that can registered for by plugins, these are
 
 =item C<NNTPSERVER>
 
-These are the 'nntp_' prefixed events that are generated. In a handler arguments are
+These are the C<nntp_> prefixed events that are generated. In a handler arguments are
 passed as scalar refs so that you may mangle the values if required.
 
 =item C<NNTPCMD>

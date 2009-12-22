@@ -1,6 +1,10 @@
 POE::Component::Client::NNTP
 ============================
 
+2.14  Tue Dec 22 14:32:49 GMT 2009
+  - RT #52615 Add SSL support, requested by
+    Arcanez (Justin Hunter)
+
 2.10	Wed Sep 10 06:41:14 BST 2008
 	- RT #39147 by DAGOLDEN
 
