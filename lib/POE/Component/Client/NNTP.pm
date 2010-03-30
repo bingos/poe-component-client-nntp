@@ -19,7 +19,7 @@ use base qw(POE::Component::Pluggable);
 use POE::Component::Pluggable::Constants qw(:ALL);
 use vars qw($VERSION);
 
-$VERSION = '2.14';
+$VERSION = '2.16';
 
 our ($GOT_SSL,$GOT_SOCKET6);
 
@@ -198,6 +198,9 @@ sub _sock_up {
   my ($kernel,$self,$session,$socket) = @_[KERNEL,OBJECT,SESSION,ARG0];
 
   delete $self->{socketfactory};
+
+  warn "Could not set SO_KEEPALIVE\n" unless
+    eval { setsockopt( $socket, SOL_SOCKET, SO_KEEPALIVE, 1 ) };
 
   $self->{localaddr} = (unpack_sockaddr_in( getsockname $socket))[1];
 

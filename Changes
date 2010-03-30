@@ -1,6 +1,10 @@
 POE::Component::Client::NNTP
 ============================
 
+2.16  Tue Mar 30 22:42:41 BST 2010
+  - Attempt to address RT #55899 reported by Ryan Chan by
+    setting the SO_KEEPALIVE socket option
+
 2.14  Tue Dec 22 14:32:49 GMT 2009
   - RT #52615 Add SSL support, requested by
     Arcanez (Justin Hunter)
