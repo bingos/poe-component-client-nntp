@@ -1,6 +1,13 @@
 POE::Component::Client::NNTP
 ============================
 
+2.18  Tue Jun  8 12:33:23 BST 2010
+  - Removed SO_KEEPALIVE socket option
+  - Implemented TimeOut option to terminate connection
+    if we don't get response from server
+  - Added most of the textual responses from RFC 2980,
+    requested by Khisanth
+
 2.16  Tue Mar 30 22:42:41 BST 2010
   - Attempt to address RT #55899 reported by Ryan Chan by
     setting the SO_KEEPALIVE socket option

@@ -19,7 +19,7 @@ use base qw(POE::Component::Pluggable);
 use POE::Component::Pluggable::Constants qw(:ALL);
 use vars qw($VERSION);
 
-$VERSION = '2.16';
+$VERSION = '2.18';
 
 our ($GOT_SSL,$GOT_SOCKET6);
 
@@ -48,6 +48,7 @@ sub spawn {
   $hash->{'NNTPServer'} = "news" unless defined $hash->{'NNTPServer'} or defined $ENV{'NNTPSERVER'};
   $hash->{'NNTPServer'} = $ENV{'NNTPSERVER'} unless defined $hash->{'NNTPServer'};
   $hash->{'Port'} = 119 unless defined $hash->{'Port'};
+  $hash->{TimeOut} = 0 unless $hash->{TimeOut} and $hash->{TimeOut} =~ /^\d+$/;
   if ( $hash->{'UseSSL'} and !$GOT_SSL ) { 
      warn "'UseSSL' specified, but could not load POE::Component::SSLify\n";
      $hash->{'UseSSL'} = 0;
@@ -60,10 +61,11 @@ sub spawn {
   $self->{serverport} = $hash->{'Port'};
   $self->{localaddr} = $hash->{'LocalAddr'};
   $self->{usessl} = $hash->{'UseSSL'};
+  $self->{timeout} = $hash->{TimeOut};
 
   $self->{session_id} = POE::Session->create(
 			object_states => [
-                          $self => [ qw(_start _stop _sock_up _sock_down _sock_failed _parseline register unregister shutdown send_cmd connect disconnect send_post __send_event) ],
+                          $self => [ qw(_start _stop _sock_up _sock_down _sock_failed _parseline register unregister shutdown send_cmd connect disconnect send_post __send_event _timeout) ],
 			  $self => $package_events,
 			],
 			heap => $self,
@@ -190,7 +192,13 @@ sub _sock_down {
   $self->{connected} = 0;
 
   $kernel->post( $_, 'nntp_disconnected', $self->{'remoteserver'} ) 
-	for keys %{ $self->{sessions} };
+	  for keys %{ $self->{sessions} };
+  undef;
+}
+
+sub _timeout {
+  my ($kernel,$self) = @_[KERNEL,OBJECT];
+  $kernel->call( $self->{session_id}, '_sock_down' );
   undef;
 }
 
@@ -199,8 +207,8 @@ sub _sock_up {
 
   delete $self->{socketfactory};
 
-  warn "Could not set SO_KEEPALIVE\n" unless
-    eval { setsockopt( $socket, SOL_SOCKET, SO_KEEPALIVE, 1 ) };
+  #warn "Could not set SO_KEEPALIVE\n" unless
+  #  eval { setsockopt( $socket, SOL_SOCKET, SO_KEEPALIVE, 1 ) };
 
   $self->{localaddr} = (unpack_sockaddr_in( getsockname $socket))[1];
 
@@ -245,6 +253,8 @@ sub _sock_failed {
 sub _parseline {
   my ($kernel, $session, $self, $line) = @_[KERNEL, SESSION, OBJECT, ARG0];
 
+  $kernel->delay( '_timeout' );
+
   SWITCH: {
     if ( $line =~ /^\.$/ and defined $self->{current_event} ) {
       $self->_send_event( 'nntp_' . shift( @{ $self->{current_event} } ), @{ $self->{current_event} }, $self->{current_text} );
@@ -254,7 +264,7 @@ sub _parseline {
     }
     if ( $line =~ /^([0-9]{3}) +(.+)$/ and !defined $self->{current_event} ) {
       my $current_event = [ $1, $2 ];
-      if ( $1 =~ /(220|221|222|100|215|231|230)/ ) {
+      if ( $1 =~ /(220|221|222|100|215|231|230|211|282|218|224)/ ) {
         $self->{current_event} = $current_event;
         $self->{current_text} = [ ];
       } 
@@ -317,7 +327,10 @@ sub send_cmd {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
   my $arg = join ' ', @_[ARG0 .. $#_];
   return 1 if $self->_pluggable_process( 'NNTPCMD', 'send_cmd', \$arg ) == PLUGIN_EAT_ALL;
-  $self->{socket}->put($arg) if defined $self->{socket};
+  if ( defined $self->{socket} ) {
+    $self->{socket}->put($arg);
+    $kernel->delay( '_timeout', $self->{timeout} ) if $self->{timeout};
+  }
   undef;
 }
 
@@ -325,7 +338,10 @@ sub _accept_input {
   my ($kernel,$self,$state) = @_[KERNEL,OBJECT,STATE];
   my $arg = join ' ', @_[ARG0 .. $#_];
   return 1 if $self->_pluggable_process( 'NNTPCMD', $state, \$arg ) == PLUGIN_EAT_ALL;
-  $self->{socket}->put("$state $arg") if defined $self->{socket};
+  if ( defined $self->{socket} ) {
+    $self->{socket}->put("$state $arg");
+    $kernel->delay( '_timeout', $self->{timeout} ) if $self->{timeout};
+  }
   undef;
 }
 
@@ -471,6 +487,7 @@ Possible values for the hashref are:
    'Port', the IP port on that host
    'LocalAddr', an IP address on the client to connect from. 
    'UseSSL', set to a true value to indicate that the poco should use SSL
+   'TimeOut', number of seconds to wait for a response from server
 
 If C<NNTPServer> is not specified, the default is C<news>, unless the environment variable C<NNTPServer> is set. If C<Port> is not specified the default is 119.
 
@@ -478,6 +495,10 @@ If C<NNTPServer> is not specified, the default is C<news>, unless the environmen
 		LocalAddr => '192.168.1.99' } );
 
 C<UseSSL> requires that L<POE::Component::SSLify> is installed.
+
+C<TimeOut> is an optional number of seconds to wait between sending a command to the server and receiving a response. If the
+timeout occurs then the connection to the server is terminated and a C<nntp_disconnected> event is triggered. The default
+behaviour is not to enable timeouts.
 
 Returns a POE::Component::Client::NNTP object.
 
@@ -635,7 +656,7 @@ Generated when the link to the NNTP server is dropped for whatever reason.
 
 Generated when the component fails to establish a connection to the NNTP server.
 
-=item C<Numeric> responses ( See RFC 977 )
+=item C<Numeric> responses ( See RFC 977 and RFC 2980 )
 
 Messages generated by NNTP servers consist of a numeric code and a text response. These will be sent to you as 
 events with the numeric code prefixed with C<nntp_>. C<ARG0>is the text response.
