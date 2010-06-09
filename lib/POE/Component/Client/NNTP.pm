@@ -691,17 +691,20 @@ Possible nntp_ values are:
    205 closing connection - goodbye!
    211 n f l s group selected
    215 list of newsgroups follows
-   220 n <a> article retrieved - head and body follow 221 n <a> article
-   retrieved - head follows
+   220 n <a> article retrieved - head and body follow
+   221 n <a> article retrieved - head follows
    222 n <a> article retrieved - body follows
-   223 n <a> article retrieved - request text separately 230 list of new
-   articles by message-id follows
+   223 n <a> article retrieved - request text separately
+   230 list of new articles by message-id follows
    231 list of new newsgroups follows
    235 article transferred ok
    240 article posted ok
+   250 authentication accepted, successful authentication using the AUTHINFO command extension.
+   281 authentication accepted, successful authentication using the AUTHINFO command extension.
 
    335 send article to be transferred.  End with <CR-LF>.<CR-LF>
    340 send article to be posted. End with <CR-LF>.<CR-LF>
+   381 more authentication information required, preliminary response to the AUTHINFO command extension.
 
    400 service discontinued
    411 no such news group
