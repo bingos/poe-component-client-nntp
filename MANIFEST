@@ -21,5 +21,6 @@ t/00_compile.t
 t/01_fake_nntpd.t
 t/02_pluggable.t
 t/03_timeout.t
+t/04_listgroup.t
 t/99_pod.t
 t/99_pod_coverage.t

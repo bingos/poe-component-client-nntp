@@ -41,6 +41,7 @@ sub spawn {
   my $package_events = {};
 
   $package_events->{$_} = '_accept_input' for qw(article body head stat group help ihave last list newgroups newnews next post quit slave authinfo);
+  $package_events->{$_} = '_accept_input' for qw(capabilities listgroup date over hdr);
 
   croak "Not enough parameters to $package::spawn()" unless $alias;
   croak "Second argument to $package::spawn() must be a hash reference" unless ref $hash eq 'HASH';
@@ -149,6 +150,7 @@ sub _start {
     $kernel->refcount_increment($sender_id, __PACKAGE__);
     $kernel->post( $sender, 'nntp_registered', $self );
   }
+  $self->{cmd_queue} = [];
   $self->{connected} = 0;
   undef;
 }
@@ -253,6 +255,8 @@ sub _sock_failed {
 sub _parseline {
   my ($kernel, $session, $self, $line) = @_[KERNEL, SESSION, OBJECT, ARG0];
 
+  my $cmd = shift @{ $self->{cmd_queue} };
+
   $kernel->delay( '_timeout' );
 
   SWITCH: {
@@ -264,7 +268,8 @@ sub _parseline {
     }
     if ( $line =~ /^([0-9]{3}) +(.+)$/ and !defined $self->{current_event} ) {
       my $current_event = [ $1, $2 ];
-      if ( $1 =~ /(220|221|222|100|215|231|230|211|282|218|224)/ ) {
+      # 211 is special GROUP and LISTGROUP generate it and it can single or multi-line
+      if ( ( $1 eq '211' and lc $cmd eq 'listgroup' ) or $1 =~ /(100|101|220|221|222|225|215|231|230|282|218|224)/ ) {
         $self->{current_event} = $current_event;
         $self->{current_text} = [ ];
       } 
@@ -328,6 +333,7 @@ sub send_cmd {
   my $arg = join ' ', @_[ARG0 .. $#_];
   return 1 if $self->_pluggable_process( 'NNTPCMD', 'send_cmd', \$arg ) == PLUGIN_EAT_ALL;
   if ( defined $self->{socket} ) {
+    push @{ $self->{cmd_queue} }, lc( ( split /\s+/, $arg )[0] );
     $self->{socket}->put($arg);
     $kernel->delay( '_timeout', $self->{timeout} ) if $self->{timeout};
   }
@@ -339,6 +345,7 @@ sub _accept_input {
   my $arg = join ' ', @_[ARG0 .. $#_];
   return 1 if $self->_pluggable_process( 'NNTPCMD', $state, \$arg ) == PLUGIN_EAT_ALL;
   if ( defined $self->{socket} ) {
+    push @{ $self->{cmd_queue} }, lc $state;
     $self->{socket}->put("$state $arg");
     $kernel->delay( '_timeout', $self->{timeout} ) if $self->{timeout};
   }
@@ -359,7 +366,7 @@ __END__
 
 =head1 NAME
 
-POE::Component::Client::NNTP - A POE component that implements an RFC 977 NNTP client.
+POE::Component::Client::NNTP - A POE component that implements an RFC 3977 NNTP client.
 
 =head1 SYNOPSIS
 
@@ -464,7 +471,7 @@ POE::Component::Client::NNTP - A POE component that implements an RFC 977 NNTP c
 =head1 DESCRIPTION
 
 POE::Component::Client::NNTP is a POE component that provides non-blocking NNTP access to other
-components and sessions. NNTP is described in RFC 977 L<http://www.faqs.org/rfcs/rfc977.html>, 
+components and sessions. NNTP is described in RFC 3977 L<http://www.faqs.org/rfcs/rfc3977.html>, 
 please read it before doing anything else.
 
 In your component or session, you spawn a NNTP client component, assign it an alias, and then 
@@ -552,7 +559,7 @@ Always ensure that you call C<unregister> before shutting down the component.
 
 =back
 
-The following are implemented NNTP commands, check RFC 977 L<http://www.faqs.org/rfcs/rfc977.html> for the arguments accepted by each. Arguments can be passed as a single scalar or a list of arguments:
+The following are implemented NNTP commands, check RFC 3977 L<http://www.faqs.org/rfcs/rfc3977.html> for the arguments accepted by each. Arguments can be passed as a single scalar or a list of arguments:
 
 =over
 
@@ -620,10 +627,32 @@ Takes no arguments.
 
 Takes no arguments.
 
+=item C<capabilities>
+
+Returns a list of capabilities.
+
+=item C<listgroup>
+
+Provides a list of article numbers in a group.
+
+=item C<date>
+
+Find out the current Coordinated Universal Time
+
+=item C<over>
+
+The OVER command returns the contents of all the fields in the
+database for an article specified by message-id.
+
+=item C<hdr>
+
+The HDR command provides access to specific fields from an article
+specified by message-id.
+
 =item C<authinfo>
 
 Takes two arguments: first argument is either C<user> or C<pass>, second argument is the user or password, respectively. 
-Not technically part of RFC 977 L<http://www.faqs.org/rfcs/rfc977.html>, but covered in RFC 2980 L<http://www.faqs.org/rfcs/rfc2980.html>.
+Not technically part of RFC 3977 L<http://www.faqs.org/rfcs/rfc3977.html>, but covered in RFC 2980 L<http://www.faqs.org/rfcs/rfc2980.html>.
 
 =item C<send_cmd>
 
