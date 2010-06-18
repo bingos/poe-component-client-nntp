@@ -1,6 +1,9 @@
 POE::Component::Client::NNTP
 ============================
 
+  - fixed line break issues, added AUTHINFO related statuses
+    ( Justin Hunter )
+
 2.18  Tue Jun  8 12:33:23 BST 2010
   - Removed SO_KEEPALIVE socket option
   - Implemented TimeOut option to terminate connection
