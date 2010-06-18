@@ -8,6 +8,8 @@
 
 package POE::Component::Client::NNTP;
 
+# ABSTRACT: A POE component that implements an RFC 3977 NNTP client.
+
 use 5.006;
 use strict;
 use warnings;
@@ -17,9 +19,6 @@ use Carp;
 use Socket;
 use base qw(POE::Component::Pluggable);
 use POE::Component::Pluggable::Constants qw(:ALL);
-use vars qw($VERSION);
-
-$VERSION = '2.18';
 
 our ($GOT_SSL,$GOT_SOCKET6);
 
@@ -362,11 +361,8 @@ sub send_post {
 }
 
 1;
-__END__
 
-=head1 NAME
-
-POE::Component::Client::NNTP - A POE component that implements an RFC 3977 NNTP client.
+=pod
 
 =head1 SYNOPSIS
 
@@ -963,18 +959,6 @@ The basic anatomy of a plugin is:
 =head1 CAVEATS
 
 The group event sets the current working group on the server end. If you want to use group and numeric form of article|head|etc then you will have to spawn multiple instances of the component for each group you want to access concurrently.
-
-=head1 AUTHOR
-
-Chris C<BinGOs> Williams, E<lt>chris@bingosnet.co.uk<gt>
-
-With code derived from L<POE::Component::IRC> by Dennis Taylor.
-
-=head1 LICENSE
-
-Copyright E<copy> Chris Williams and Dennis Taylor.
-
-This module may be used, modified, and distributed under the same terms as Perl itself. Please see the license that came with your Perl distribution for details.
 
 =head1 SEE ALSO
 

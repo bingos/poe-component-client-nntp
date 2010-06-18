@@ -1,10 +1,9 @@
 package POE::Component::Client::NNTP::Constants;
 
+# ABSTRACT: importable constants for POE::Component::Client::NNTP plugins.
+
 use strict;
 use warnings;
-use vars qw($VERSION);
-
-$VERSION = '2.12';
 
 require Exporter;
 our @ISA = qw( Exporter );
@@ -18,11 +17,8 @@ sub NNTP_EAT_PLUGIN	() { 3 }
 sub NNTP_EAT_ALL	() { 4 }
 
 1;
-__END__
 
-=head1 NAME
-
-POE::Component::Client::NNTP::Constants - importable constants for POE::Component::Client::NNTP plugins.
+=pod
 
 =head1 SYNOPSIS
 
@@ -53,16 +49,6 @@ Value: 3
 Value: 4
 
 =back
-
-=head1 MAINTAINER
-
-Chris 'BinGOs' Williams <chris@bingosnet.co.uk>
-
-=head1 LICENSE
-
-Copyright E<copy> Chris Williams.
-
-This module may be used, modified, and distributed under the same terms as Perl itself. Please see the license that came with your Perl distribution for details.
 
 =head1 SEE ALSO
 
