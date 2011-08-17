@@ -9,16 +9,16 @@ News Transport Protocol ( NNTP ) requests and receive applicable responses, to
 /from an NNTP server.
 
 The component assumes a working knowledge of RFC 977 and, optionally, RFC 2980.
-<http://www.faqs.org/rfcs/rfc977.html> 
+<http://www.faqs.org/rfcs/rfc977.html>
 <http://www.faqs.org/rfcs/rfc2980.html>
 
 2). Implementation
 
-The component is spawned and christened with a kernel alias. You 'register' 
-with the component to receive events. 
+The component is spawned and christened with a kernel alias. You 'register'
+with the component to receive events.
 
 For server responses which generate additional text such as 'help', 'article',
-etc. the component waits until it has received all server output before 
+etc. the component waits until it has received all server output before
 returning the applicable event with the text appended.
 
 Eg.
@@ -43,7 +43,7 @@ sub nntp_220 {
 
 3). DISCLAIMER
 
-This module is provided "as is". 
+This module is provided "as is".
 No Income Tax. No V.A.T.
 No money back. No guarantee.
 

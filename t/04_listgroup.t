@@ -28,7 +28,7 @@ sub server_start {
     my ($kernel,$heap) = @_[KERNEL,HEAP];
 
     $heap->{server} = Test::POE::Server::TCP->spawn
-      ( 
+      (
 	address => '127.0.0.1',
       );
      return;
@@ -87,7 +87,7 @@ sub client_input {
         last SWITCH;
       }
       if ( $input =~ /^LISTGROUP/i ) {
-        $heap->{server}->send_to_client( $id, 
+        $heap->{server}->send_to_client( $id,
           [ '211 2000 3000234 3002322 perl.poe list follows', qw(3000234 3000237 3000328 3000329 3002322), '.' ] );
 	      pass("LISTGROUP cmd");
 	      last SWITCH;

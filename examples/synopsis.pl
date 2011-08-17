@@ -27,7 +27,7 @@
 
    sub _start {
         my ($kernel,$heap) = @_[KERNEL,HEAP];
-        
+
         # Our session starts, register to receive all events from poco-client-nntp
         $kernel->post ( 'NNTP-Client' => register => 'all' );
         # Okay, ask it to connect to the server

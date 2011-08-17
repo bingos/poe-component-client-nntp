@@ -80,7 +80,7 @@ sub server_start {
     my ($our_port);
 
     $_[HEAP]->{server} = POE::Wheel::SocketFactory->new
-      ( 
+      (
 	BindAddress => '127.0.0.1',
         SuccessEvent => "server_accepted",
         FailureEvent => "server_error",
@@ -151,7 +151,7 @@ sub server_shutdown {
 
 sub client_input {
     my ( $heap, $input, $wheel_id ) = @_[ HEAP, ARG0, ARG1 ];
-     
+
     # Quick and dirty parsing as we know it is our component connecting
     SWITCH: {
       if ( $input =~ /^LIST/i ) {

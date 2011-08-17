@@ -29,7 +29,7 @@ sub server_start {
     my ($kernel,$heap) = @_[KERNEL,HEAP];
 
     $heap->{server} = Test::POE::Server::TCP->spawn
-      ( 
+      (
 	address => '127.0.0.1',
       );
      return;
