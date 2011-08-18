@@ -28,11 +28,6 @@ BEGIN {
         import POE::Component::SSLify qw( Client_SSLify );
         $GOT_SSL = 1;
     };
-    eval {
-        require Socket6;
-        import Socket6;
-        $GOT_SOCKET6 = 1;
-    };
 }
 
 sub spawn {
